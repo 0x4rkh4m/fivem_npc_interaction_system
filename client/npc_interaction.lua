@@ -3,6 +3,11 @@ local Config = require 'shared.config'
 local Raycast = require 'client.raycast'
 local Logger = require 'shared.logger'
 
+-- Ensure Raycast is correctly loaded
+if type(Raycast) ~= "table" then
+    error("Failed to load Raycast module. Expected a table, got " .. type(Raycast))
+end
+
 -- Define the NPCInteraction class
 local NPCInteraction = {}
 NPCInteraction.__index = NPCInteraction
@@ -26,33 +31,62 @@ function NPCInteraction:start()
     Citizen.CreateThread(function()
         while true do
             Citizen.Wait(1000) -- Increased wait time for better performance
-
-            raycast:perform(function(hit, entityHit, endCoords, surfaceNormal, materialHash)
-                if hit and entityHit then
-                    self.logger:info("Raycast hit entity ID: " .. entityHit)
-                    self.logger:info("Raycast end coordinates: " .. tostring(endCoords))
-
-                    if self.targetNPC ~= entityHit then
-                        -- If new NPC detected, stop and make it face the player
-                        self:stopAndTurnNPC(entityHit)
-                        self.targetNPC = entityHit
-                        self.isNPCStopped = true
-                    else
-                        -- If the same NPC is still being looked at, ensure it keeps facing the player
-                        self:keepFacingPlayer(entityHit)
-                    end
-                else
-                    -- If no NPC detected and there was a target previously
-                    if self.targetNPC and self.isNPCStopped then
-                        -- Resume behavior of previous NPC
-                        self:resumeNPC(self.targetNPC)
-                        self.targetNPC = nil
-                        self.isNPCStopped = false
-                    end
-                end
-            end)
+            self:checkForNPCInteraction(raycast)
         end
     end)
+end
+
+--- Check for NPC interaction
+-- @param raycast Raycast The raycast instance
+function NPCInteraction:checkForNPCInteraction(raycast)
+    local playerPed = PlayerPedId()
+    if raycast:isPlayerNearNPC(playerPed, self.distance) then
+        raycast:perform(function(hit, entityHit, endCoords, surfaceNormal, materialHash)
+            self:handleRaycastResult(hit, entityHit, endCoords, surfaceNormal, materialHash)
+        end)
+    else
+        -- If no NPCs are nearby, log or handle accordingly
+        self.logger:info("No NPCs nearby.")
+    end
+end
+
+--- Handle the result of the raycast
+-- @param hit boolean Whether the raycast hit an entity
+-- @param entityHit number The entity hit by the raycast
+-- @param endCoords vector3 The end coordinates of the raycast
+-- @param surfaceNormal vector3 The surface normal at the hit point (optional)
+-- @param materialHash number The material hash at the hit point (optional)
+function NPCInteraction:handleRaycastResult(hit, entityHit, endCoords, surfaceNormal, materialHash)
+    if hit and entityHit then
+        self.logger:info("Raycast hit entity ID: " .. entityHit)
+        self.logger:info("Raycast end coordinates: " .. tostring(endCoords))
+
+        if surfaceNormal then
+            self.logger:info("Surface normal: " .. tostring(surfaceNormal))
+        end
+
+        if materialHash then
+            self.logger:info("Material hash: " .. tostring(materialHash))
+        end
+
+        if self.targetNPC ~= entityHit then
+            -- If new NPC detected, stop and make it face the player
+            self:stopAndTurnNPC(entityHit)
+            self.targetNPC = entityHit
+            self.isNPCStopped = true
+        else
+            -- If the same NPC is still being looked at, ensure it keeps facing the player
+            self:keepFacingPlayer(entityHit)
+        end
+    else
+        -- If no NPC detected and there was a target previously
+        if self.targetNPC and self.isNPCStopped then
+            -- Resume behavior of previous NPC
+            self:resumeNPC(self.targetNPC)
+            self.targetNPC = nil
+            self.isNPCStopped = false
+        end
+    end
 end
 
 --- Stop the NPC and make it turn towards the player

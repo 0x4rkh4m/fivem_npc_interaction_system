@@ -43,4 +43,26 @@ function Raycast:perform(callback)
     end)
 end
 
+--- Check if the player is near any NPCs
+-- @param playerPed number The player's ped
+-- @param distance number The distance to check
+-- @return boolean Whether the player is near any NPCs
+function Raycast:isPlayerNearNPC(playerPed, distance)
+    local playerCoords = GetEntityCoords(playerPed)
+    local handle, ped = FindFirstPed()
+    local success
+    repeat
+        if DoesEntityExist(ped) and not IsPedAPlayer(ped) then
+            local pedCoords = GetEntityCoords(ped)
+            if #(playerCoords - pedCoords) <= distance then
+                EndFindPed(handle)
+                return true
+            end
+        end
+        success, ped = FindNextPed(handle)
+    until not success
+    EndFindPed(handle)
+    return false
+end
+
 return Raycast
