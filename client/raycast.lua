@@ -1,14 +1,15 @@
--- Import the configuration module
+--- Raycast class for performing raycasts.
+-- @classmod Raycast
+
 local Config = require 'shared.config'
 local Logger = require 'shared.logger'
 
--- Define the Raycast class
 local Raycast = {}
 Raycast.__index = Raycast
 
---- Constructor for the Raycast class
--- @param distance number The distance for the raycast
--- @return Raycast A new instance of Raycast
+--- Constructor for the Raycast class.
+-- @param distance number The distance for the raycast.
+-- @return Raycast A new instance of Raycast.
 function Raycast:new(distance)
     local self = setmetatable({}, Raycast)
     self.distance = distance or Config.RAYCAST_DISTANCE
@@ -16,8 +17,8 @@ function Raycast:new(distance)
     return self
 end
 
---- Perform the raycast from the player's view
--- @param callback function The function to call when an entity is hit
+--- Perform the raycast from the player's view.
+-- @param callback function The function to call when an entity is hit.
 function Raycast:perform(callback)
     Citizen.CreateThread(function()
         local playerPed = PlayerPedId()
@@ -43,10 +44,10 @@ function Raycast:perform(callback)
     end)
 end
 
---- Check if the player is near any NPCs
--- @param playerPed number The player's ped
--- @param distance number The distance to check
--- @return boolean Whether the player is near any NPCs
+--- Check if the player is near any NPCs.
+-- @param playerPed number The player's ped.
+-- @param distance number The distance to check.
+-- @return boolean Whether the player is near any NPCs.
 function Raycast:isPlayerNearNPC(playerPed, distance)
     local playerCoords = GetEntityCoords(playerPed)
     local handle, ped = FindFirstPed()
